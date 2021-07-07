@@ -95,7 +95,6 @@ const DraggableOval = styled.div`
 
 function App() {
   const ref = useRef();
-  const squareRef = useRef();
 
   let rect;
 
