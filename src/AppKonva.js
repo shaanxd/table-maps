@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useRef, useState } from "react";
-import { Stage, Layer } from "react-konva";
+import { Stage, Layer, Rect } from "react-konva";
 
 import {
   Container,
@@ -10,19 +10,30 @@ import {
   ParentPane,
   TopPane,
 } from "./components";
-import { DRAGGABLE_TYPES, INITIAL_STAGE_DIMENSIONS, TABLES } from "./constants";
+import {
+  ASPECT_RATIO,
+  DRAGGABLE_TYPES,
+  INITIAL_STAGE_DIMENSIONS,
+  TABLES,
+} from "./constants";
 import UnassignedStageTable from "./UnassignedStageTable";
 import UnassignedTable from "./UnassignedTable.js";
 
 import UnassignedSVG from "./static/unassigned.svg";
+import { useWindowSize } from "react-use";
 
 function App() {
   const rightPaneRef = useRef();
   const stageRef = useRef();
+  const stage = useRef();
+
+  const { width: windowWidth } = useWindowSize();
+
+  console.log("[X]", windowWidth);
 
   const [tables, setTables] = useState(TABLES);
   const [draggable, setDraggable] = useState(null);
-  const [stageDimensions, setStateDimensions] = useState(null);
+  const [stageDimensions, setStageDimensions] = useState(null);
   const [stageElements, setStageElements] = useState([]);
   const [selectedElement, setSelectedElement] = useState(null);
   const [stagePixelDimensions, setStagePixelDimensions] = useState({
@@ -30,10 +41,24 @@ function App() {
     height: INITIAL_STAGE_DIMENSIONS.HEIGHT,
   });
 
+  //   useLayoutEffect(() => {
+  //     const { height, width } = rightPaneRef.current.getBoundingClientRect();
+  //     setStateDimensions({ height, width });
+  //   }, []);
+
+  function calibrateRightPaneHeight() {
+    const { HEIGHT, WIDTH } = ASPECT_RATIO;
+    const { offsetWidth } = rightPaneRef.current;
+    const scaledHeight = (offsetWidth / WIDTH) * HEIGHT;
+    rightPaneRef.current.style.height = `${scaledHeight}px`;
+
+    setStageDimensions({ height: scaledHeight, width: offsetWidth });
+  }
+
   useLayoutEffect(() => {
-    const { height, width } = rightPaneRef.current.getBoundingClientRect();
-    setStateDimensions({ height, width });
-  }, []);
+    calibrateRightPaneHeight();
+    //  eslint-disable-next-line;
+  }, [windowWidth]);
 
   function handleOnDragStart(e, type, { width, height, ...rest }) {
     const { top, left } = e.target.getBoundingClientRect();
@@ -202,7 +227,25 @@ function App() {
               onDrop={handleOnDrop}
               id="container"
             >
-              {stageDimensions && (
+              <Stage
+                ref={stage}
+                width={100}
+                height={100}
+                style={{
+                  backgroundColor: "red",
+                }}
+              >
+                {/* <Layer>
+                  <Rect
+                    x={0}
+                    y={0}
+                    width={stagePixelDimensions.width}
+                    height={stagePixelDimensions.height}
+                    stroke="red"
+                  />
+                </Layer> */}
+              </Stage>
+              {/* {stageDimensions && (
                 <Stage ref={stageRef} {...stageDimensions} id="container">
                   <Layer>
                     {stageElements.map((stageElement) => {
@@ -225,7 +268,7 @@ function App() {
                     })}
                   </Layer>
                 </Stage>
-              )}
+              )} */}
             </RightPane>
           </MiddlePane>
         </ParentPane>

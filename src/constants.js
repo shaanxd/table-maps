@@ -23,6 +23,18 @@ export const DRAGGABLE_TYPES = {
 };
 
 export const INITIAL_STAGE_DIMENSIONS = {
-  WIDTH: 600,
-  HEIGHT: 400,
+  width: 800,
+  height: 400,
+};
+
+export const ASPECT_RATIO = {
+  WIDTH: 2,
+  HEIGHT: 1,
+};
+
+export const GRID_SIZE = 100;
+
+export const SCALE_FACTOR = {
+  WIDTH: 80,
+  HEIGHT: 40,
 };

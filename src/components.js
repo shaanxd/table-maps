@@ -3,27 +3,27 @@ import styled from "styled-components";
 export const Container = styled.div`
   display: flex;
   max-height: 100%;
+  flex-direction: column;
 `;
 
 export const MiddlePane = styled.div`
   display: flex;
-  height: 400px;
 `;
 
 export const LeftPane = styled.div`
   display: flex;
   flex-direction: column;
-  width: 200px;
+  min-width: 200px;
+  max-width: 200px;
   padding: 0.5rem;
   background-color: #ededed;
-  border: 1px solid #d2d2d2;
 `;
 
 export const RightPane = styled.div`
   display: flex;
-  flex-direction: column;
   flex: 1;
-  border: 1px solid #d2d2d2;
+  box-sizing: border-box;
+  margin-bottom: auto;
 `;
 
 export const DraggableCanvas = styled.div`
@@ -72,5 +72,5 @@ export const TopPane = styled.div`
 export const ParentPane = styled.div`
   display: flex;
   flex-direction: column;
-  width: 800px;
+  padding: 2rem;
 `;
