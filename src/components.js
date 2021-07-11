@@ -4,10 +4,12 @@ export const Container = styled.div`
   display: flex;
   max-height: 100%;
   flex-direction: column;
+  max-width: 1200px;
 `;
 
 export const MiddlePane = styled.div`
   display: flex;
+  border: 1px solid #d2d2d2;
 `;
 
 export const LeftPane = styled.div`
@@ -67,10 +69,12 @@ export const TopPane = styled.div`
   flex-wrap: wrap;
   padding: 1rem;
   border: 1px solid #d2d2d2;
+  border-bottom: none;
 `;
 
 export const ParentPane = styled.div`
   display: flex;
   flex-direction: column;
   padding: 2rem;
+  border: 1px solid #d2d2d2;
 `;

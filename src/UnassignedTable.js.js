@@ -1,21 +1,23 @@
 import React from "react";
-import styled from "styled-components";
-import { DRAGGABLE_TYPES } from "./constants";
+import styled, { css } from "styled-components";
+import { DRAGGABLE_TYPES, UNASSIGNED_TABLE_DIMENSIONS } from "./constants";
 
 import Unassigned from "./static/unassigned.svg";
 
 const Container = styled.div`
   margin: 0.5rem;
   position: relative;
-  font-size: 0.7rem;
   padding: 0;
   display: flex;
 `;
 
 const Image = styled.img`
-  width: 50px;
-  height: 50px;
   pointer-events: none;
+  ${({ devicePixelRatio }) =>
+    css`
+      width: ${UNASSIGNED_TABLE_DIMENSIONS.WIDTH * devicePixelRatio}px;
+      height: ${UNASSIGNED_TABLE_DIMENSIONS.HEIGHT * devicePixelRatio}px;
+    `};
 `;
 
 const Text = styled.div`
@@ -25,9 +27,14 @@ const Text = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
+  font-size: ${({ devicePixelRatio }) => `${12 * devicePixelRatio}px`};
 `;
 
-function UnassignedTable({ table: { name, id }, onDragStart }) {
+function UnassignedTable({
+  table: { name, id },
+  onDragStart,
+  devicePixelRatio,
+}) {
   function handleOnDragStart(e) {
     onDragStart(e, DRAGGABLE_TYPES.UNASSIGNED, {
       id,
@@ -41,8 +48,12 @@ function UnassignedTable({ table: { name, id }, onDragStart }) {
 
   return (
     <Container draggable="true" onDragStart={handleOnDragStart}>
-      <Image draggable="false" src={Unassigned}></Image>
-      <Text>{name}</Text>
+      <Image
+        devicePixelRatio={devicePixelRatio}
+        draggable="false"
+        src={Unassigned}
+      ></Image>
+      <Text devicePixelRatio={devicePixelRatio}>{name}</Text>
     </Container>
   );
 }

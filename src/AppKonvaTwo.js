@@ -67,6 +67,7 @@ function App() {
     x: 0,
     y: 0,
   });
+  const [devicePixelRatio, setDevicePixelRatio] = useState(1);
 
   function redrawGridlines() {
     const { width: viewportWidth, height: viewportHeight } = viewportSize;
@@ -131,6 +132,32 @@ function App() {
     rightPaneRef.current.style.width = `${canvasParentWidth}px`;
 
     setStageSize({ width: canvasParentWidth, height: scaledHeight });
+    setDevicePixelRatio(canvasParentWidth / INITIAL_STAGE_DIMENSIONS.width);
+  }
+
+  function recalculateOutOfBoundsArea() {
+    const { width: canvasWidth, height: canvasHeight } = canvasSize;
+    const { width: viewportWidth, height: viewportHeight } = viewportSize;
+
+    const outOfBoundsWidth = canvasWidth - viewportWidth;
+    const outOfBoundsHeight = canvasHeight - viewportHeight;
+
+    if (outOfBoundsWidth === 0 && outOfBoundsHeight === 0) {
+      setOutOfBoundsArea({
+        width: 0,
+        height: 0,
+        x: 0,
+        y: 0,
+      });
+      return;
+    }
+
+    setOutOfBoundsArea({
+      width: outOfBoundsWidth === 0 ? viewportWidth : outOfBoundsWidth,
+      height: outOfBoundsHeight === 0 ? viewportHeight : outOfBoundsHeight,
+      x: outOfBoundsWidth === 0 ? 0 : viewportWidth,
+      y: outOfBoundsHeight === 0 ? 0 : viewportHeight,
+    });
   }
 
   function scaleUp() {
@@ -194,28 +221,7 @@ function App() {
   }
 
   useEffect(() => {
-    const { width: canvasWidth, height: canvasHeight } = canvasSize;
-    const { width: viewportWidth, height: viewportHeight } = viewportSize;
-
-    const outOfBoundsWidth = canvasWidth - viewportWidth;
-    const outOfBoundsHeight = canvasHeight - viewportHeight;
-
-    if (outOfBoundsWidth === 0 && outOfBoundsHeight === 0) {
-      setOutOfBoundsArea({
-        width: 0,
-        height: 0,
-        x: 0,
-        y: 0,
-      });
-      return;
-    }
-
-    setOutOfBoundsArea({
-      width: outOfBoundsWidth === 0 ? viewportWidth : outOfBoundsWidth,
-      height: outOfBoundsHeight === 0 ? viewportHeight : outOfBoundsHeight,
-      x: outOfBoundsWidth === 0 ? 0 : viewportWidth,
-      y: outOfBoundsHeight === 0 ? 0 : viewportHeight,
-    });
+    recalculateOutOfBoundsArea();
     //  eslint-disable-next-line
   }, [canvasSize]);
 
@@ -239,6 +245,7 @@ function App() {
               .filter(({ assigned }) => !assigned)
               .map((table) => (
                 <UnassignedTable
+                  devicePixelRatio={devicePixelRatio}
                   key={table.id}
                   table={table}
                   onDragStart={() => {}}
@@ -273,9 +280,9 @@ function App() {
           <pre>
             {JSON.stringify(
               {
-                stageSize,
-                virtualDimensions: canvasSize,
-                actualViewPortSize: viewportSize,
+                stage: stageSize,
+                canvas: canvasSize,
+                viewport: viewportSize,
               },
               null,
               2

@@ -38,3 +38,8 @@ export const SCALE_FACTOR = {
   WIDTH: 80,
   HEIGHT: 40,
 };
+
+export const UNASSIGNED_TABLE_DIMENSIONS = {
+  WIDTH: 50,
+  HEIGHT: 50,
+};
