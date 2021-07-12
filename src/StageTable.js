@@ -1,6 +1,7 @@
 import React, { useLayoutEffect, useRef, useState, useEffect } from "react";
 import useImage from "use-image";
 import { Image, Text, Group, Transformer, Rect } from "react-konva";
+import { FONT_SIZE_IN_DEVICE_PIXELS, TABLE_DATA } from "./constants";
 
 function getOffset({ width, height }, textDimensions) {
   if (textDimensions) {
@@ -16,10 +17,10 @@ function getOffset({ width, height }, textDimensions) {
   };
 }
 
-function UnassignedStageTable({
+function StageTable({
   data,
   getDragBounds,
-  setSelected,
+  onSelect,
   selected,
   onDragEnd,
   onTransformEnd,
@@ -34,10 +35,8 @@ function UnassignedStageTable({
     textWidth: 0,
     textHeight: 0,
   });
-  const [boundDimensions, setBoundDimensions] = useState(null);
 
   const {
-    src,
     x,
     y,
     id,
@@ -47,7 +46,10 @@ function UnassignedStageTable({
     rotation,
     imageWidth,
     imageHeight,
+    tableType,
   } = data;
+
+  const { src } = TABLE_DATA[tableType];
 
   useLayoutEffect(() => {
     const { textWidth, textHeight } = textRef.current;
@@ -75,11 +77,11 @@ function UnassignedStageTable({
   }
 
   function handleOnSelect() {
-    setSelected(id);
+    onSelect(id);
   }
 
   function handleDragStart(e) {
-    setSelected(id);
+    onSelect(id);
   }
 
   function handleDragEnd(e) {
@@ -89,6 +91,7 @@ function UnassignedStageTable({
   function handleOnTransformEnd(e) {
     shapeRef.current.x(width / 2);
     shapeRef.current.y(height / 2);
+
     onTransformEnd(
       { rotation: Math.round(e.currentTarget.rotation()) },
       { id }
@@ -108,7 +111,17 @@ function UnassignedStageTable({
       ref={groupRef}
       rotation={0}
     >
-      <Rect width={width} height={height} stroke="blue" />
+      {selected && (
+        <Rect
+          x={0}
+          y={0}
+          width={width}
+          height={height}
+          stroke="red"
+          strokeWidth={1}
+          dash={[2, 2]}
+        />
+      )}
       <Image
         image={img}
         width={imageWidth}
@@ -127,6 +140,7 @@ function UnassignedStageTable({
         ref={textRef}
         {...getOffset({ width, height }, textDimensions)}
         text={name}
+        fontSize={FONT_SIZE_IN_DEVICE_PIXELS}
       />
       {selected && (
         <Transformer ref={trRef} resizeEnabled={false}></Transformer>
@@ -135,4 +149,4 @@ function UnassignedStageTable({
   );
 }
 
-export default UnassignedStageTable;
+export default StageTable;

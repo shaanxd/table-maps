@@ -1,5 +1,6 @@
-import React, { useLayoutEffect, useRef, useState } from "react";
-import { Stage, Layer, Rect } from "react-konva";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Stage, Layer, Rect, Line } from "react-konva";
+import { useWindowSize } from "react-use";
 
 import {
   Container,
@@ -9,65 +10,253 @@ import {
   BottomPane,
   ParentPane,
   TopPane,
+  Button,
+  PaneSeparator,
 } from "./components";
 import {
   ASPECT_RATIO,
-  DRAGGABLE_TYPES,
   INITIAL_STAGE_DIMENSIONS,
+  GRID_SIZE,
   TABLES,
 } from "./constants";
-import UnassignedStageTable from "./UnassignedStageTable";
-import UnassignedTable from "./UnassignedTable.js";
+import StageTable from "./StageTable";
+import DraggableTable from "./DraggableTable.js";
 
-import UnassignedSVG from "./static/unassigned.svg";
-import { useWindowSize } from "react-use";
+function getScale(scene, viewport) {
+  const { width: sceneWidth, height: sceneHeight } = scene;
+  const { width: viewportWidth, height: viewportHeight } = viewport;
+
+  return {
+    scaleX: sceneWidth / viewportWidth,
+    scaleY: sceneHeight / viewportHeight,
+  };
+}
+
+function getReverseScale(scene, viewport) {
+  const { width: sceneWidth, height: sceneHeight } = scene;
+  const { width: viewportWidth, height: viewportHeight } = viewport;
+
+  return {
+    scaleX: viewportWidth / sceneWidth,
+    scaleY: viewportHeight / sceneHeight,
+  };
+}
+
+function calculateGridSizeScaleRatio() {
+  let widthGridScaleRatio;
+  let heightGridScaleRatio;
+
+  if (ASPECT_RATIO.WIDTH > ASPECT_RATIO.HEIGHT) {
+    widthGridScaleRatio = ASPECT_RATIO.HEIGHT * ASPECT_RATIO.WIDTH;
+    heightGridScaleRatio = ASPECT_RATIO.HEIGHT;
+  } else if (ASPECT_RATIO.HEIGHT > ASPECT_RATIO.WIDTH) {
+    widthGridScaleRatio = ASPECT_RATIO.WIDTH;
+    heightGridScaleRatio = ASPECT_RATIO.WIDTH * ASPECT_RATIO.HEIGHT;
+  } else {
+    widthGridScaleRatio = ASPECT_RATIO.WIDTH;
+    heightGridScaleRatio = ASPECT_RATIO.HEIGHT;
+  }
+
+  return { widthGridScaleRatio, heightGridScaleRatio };
+}
+
+function getBoundPerCoord(pos, parent, child) {
+  const offset = parent - child / 2;
+
+  if (pos < child / 2) {
+    return child / 2;
+  }
+  if (pos > offset) {
+    return offset;
+  }
+  return pos;
+}
 
 function App() {
   const rightPaneRef = useRef();
+  const middleRef = useRef();
+  const leftPaneRef = useRef();
   const stageRef = useRef();
-  const stage = useRef();
 
   const { width: windowWidth } = useWindowSize();
 
-  console.log("[X]", windowWidth);
-
   const [tables, setTables] = useState(TABLES);
-  const [draggable, setDraggable] = useState(null);
-  const [stageDimensions, setStageDimensions] = useState(null);
-  const [stageElements, setStageElements] = useState([]);
-  const [selectedElement, setSelectedElement] = useState(null);
-  const [stagePixelDimensions, setStagePixelDimensions] = useState({
-    width: INITIAL_STAGE_DIMENSIONS.WIDTH,
-    height: INITIAL_STAGE_DIMENSIONS.HEIGHT,
+  const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
+  const [canvasSize, setCanvasSize] = useState(INITIAL_STAGE_DIMENSIONS);
+  const [gridLines, setGridLines] = useState([]);
+  const [viewportSize, setViewPortSize] = useState(INITIAL_STAGE_DIMENSIONS);
+  const [outOfBoundsArea, setOutOfBoundsArea] = useState({
+    width: 0,
+    height: 0,
+    x: 0,
+    y: 0,
   });
+  const [dpRatio, setDpRatio] = useState(1);
+  const [draggable, setDraggable] = useState(null);
+  const [elements, setElements] = useState([]);
+  const [selected, setSelected] = useState(null);
 
-  //   useLayoutEffect(() => {
-  //     const { height, width } = rightPaneRef.current.getBoundingClientRect();
-  //     setStateDimensions({ height, width });
-  //   }, []);
-
-  function calibrateRightPaneHeight() {
-    const { HEIGHT, WIDTH } = ASPECT_RATIO;
-    const { offsetWidth } = rightPaneRef.current;
-    const scaledHeight = (offsetWidth / WIDTH) * HEIGHT;
-    rightPaneRef.current.style.height = `${scaledHeight}px`;
-
-    setStageDimensions({ height: scaledHeight, width: offsetWidth });
+  function redrawGridlines() {
+    const { width: viewportWidth, height: viewportHeight } = viewportSize;
+    const arr = [];
+    for (let i = 0; i <= viewportWidth; i += GRID_SIZE) {
+      arr.push(
+        <Line
+          points={[i, 0, i, viewportHeight]}
+          stroke="#ccc"
+          strokeWidth={1}
+        />
+      );
+    }
+    for (let i = 0; i <= viewportHeight; i += GRID_SIZE) {
+      arr.push(
+        <Line points={[0, i, viewportWidth, i]} stroke="#ccc" strokeWidth={1} />
+      );
+    }
+    setGridLines(arr);
   }
 
-  useLayoutEffect(() => {
-    calibrateRightPaneHeight();
-    //  eslint-disable-next-line;
-  }, [windowWidth]);
+  function recalculateCanvasDimensions() {
+    const { width: viewportWidth, height: viewportHeight } = viewportSize;
 
-  function handleOnDragStart(e, type, { width, height, ...rest }) {
+    let viewportWidthRatio;
+    let viewportHeightRatio;
+
+    if (viewportWidth > viewportHeight) {
+      viewportWidthRatio = viewportWidth / viewportHeight;
+      viewportHeightRatio = 1;
+    } else if (viewportHeight > viewportWidth) {
+      viewportWidthRatio = 1;
+      viewportHeightRatio = viewportHeight / viewportWidth;
+    } else {
+      viewportWidthRatio = 1;
+      viewportHeightRatio = 1;
+    }
+
+    if (viewportWidthRatio >= ASPECT_RATIO.WIDTH) {
+      setCanvasSize({
+        width: viewportWidth,
+        height: (viewportWidth / ASPECT_RATIO.WIDTH) * ASPECT_RATIO.HEIGHT,
+      });
+    } else if (viewportHeightRatio >= ASPECT_RATIO.HEIGHT) {
+      setCanvasSize({
+        width: (viewportHeight / ASPECT_RATIO.HEIGHT) * ASPECT_RATIO.WIDTH,
+        height: viewportHeight,
+      });
+    }
+  }
+
+  function recalculateParentDimensions() {
+    const { offsetWidth: leftPaneOffsetWidth } = leftPaneRef.current;
+    const { offsetWidth: middlePaneOffsetWidth } = middleRef.current;
+
+    const canvasParentWidth = middlePaneOffsetWidth - leftPaneOffsetWidth - 10;
+
+    const scaledHeight =
+      (canvasParentWidth / ASPECT_RATIO.WIDTH) * ASPECT_RATIO.HEIGHT;
+
+    rightPaneRef.current.style.height = `${scaledHeight}px`;
+    rightPaneRef.current.style.width = `${canvasParentWidth}px`;
+
+    setStageSize({ width: canvasParentWidth, height: scaledHeight });
+    setDpRatio(canvasParentWidth / INITIAL_STAGE_DIMENSIONS.width);
+  }
+
+  function recalculateOutOfBoundsArea() {
+    const { width: canvasWidth, height: canvasHeight } = canvasSize;
+    const { width: viewportWidth, height: viewportHeight } = viewportSize;
+
+    const outOfBoundsWidth = canvasWidth - viewportWidth;
+    const outOfBoundsHeight = canvasHeight - viewportHeight;
+
+    if (outOfBoundsWidth === 0 && outOfBoundsHeight === 0) {
+      setOutOfBoundsArea({
+        width: 0,
+        height: 0,
+        x: 0,
+        y: 0,
+      });
+      return;
+    }
+
+    setOutOfBoundsArea({
+      width: outOfBoundsWidth === 0 ? viewportWidth : outOfBoundsWidth,
+      height: outOfBoundsHeight === 0 ? viewportHeight : outOfBoundsHeight,
+      x: outOfBoundsWidth === 0 ? 0 : viewportWidth,
+      y: outOfBoundsHeight === 0 ? 0 : viewportHeight,
+    });
+  }
+
+  function scaleUp() {
+    const { width: viewportWidth, height: viewportHeight } = viewportSize;
+
+    const { widthGridScaleRatio, heightGridScaleRatio } =
+      calculateGridSizeScaleRatio();
+
+    setViewPortSize({
+      width: viewportWidth + GRID_SIZE * widthGridScaleRatio,
+      height: viewportHeight + GRID_SIZE * heightGridScaleRatio,
+    });
+  }
+
+  function scaleDown() {
+    const { width: viewportWidth, height: viewportHeight } = viewportSize;
+
+    const { widthGridScaleRatio, heightGridScaleRatio } =
+      calculateGridSizeScaleRatio();
+
+    setViewPortSize({
+      width: viewportWidth - GRID_SIZE * widthGridScaleRatio,
+      height: viewportHeight - GRID_SIZE * heightGridScaleRatio,
+    });
+  }
+
+  function scaleXUp() {
+    const { width: viewportWidth, height: viewportHeight } = viewportSize;
+
+    setViewPortSize({
+      width: viewportWidth + GRID_SIZE,
+      height: viewportHeight,
+    });
+  }
+
+  function scaleXDown() {
+    const { width: viewportWidth, height: viewportHeight } = viewportSize;
+
+    setViewPortSize({
+      width: viewportWidth - GRID_SIZE,
+      height: viewportHeight,
+    });
+  }
+
+  function scaleYUp() {
+    const { width: viewportWidth, height: viewportHeight } = viewportSize;
+
+    setViewPortSize({
+      width: viewportWidth,
+      height: viewportHeight + GRID_SIZE,
+    });
+  }
+
+  function scaleYDown() {
+    const { width: viewportWidth, height: viewportHeight } = viewportSize;
+
+    setViewPortSize({
+      width: viewportWidth,
+      height: viewportHeight - GRID_SIZE,
+    });
+  }
+
+  function handleOnDragStart(e, { width, height, type, ...rest }) {
     const { top, left } = e.target.getBoundingClientRect();
+
     setDraggable({
       type,
       params: {
         ...rest,
         width,
         height,
+        type,
       },
       diffX: e.pageX - left - width / 2,
       diffY: e.pageY - top - height / 2,
@@ -78,44 +267,35 @@ function App() {
     e.preventDefault();
   }
 
-  function getBoundPerCoord(pos, parent, child) {
-    const offset = parent - child / 2;
-
-    if (pos < child / 2) {
-      return child / 2;
-    }
-    if (pos > offset) {
-      return offset;
-    }
-    return pos;
-  }
-
   function handleOnDrop(e) {
     e.preventDefault();
 
     if (!draggable || !Object.keys(draggable).length === 0) {
       return;
     }
-    const { width: stageWidth, height: stageHeight } = stageDimensions;
 
     const {
-      diffX,
-      diffY,
       type,
       params: { id, width, height, ...rest },
+      diffX,
+      diffY,
     } = draggable;
 
     stageRef.current.setPointersPositions(e);
-    const { x, y } = stageRef.current.getPointerPosition();
+    const { x: stageXPosition, y: stageYPosition } =
+      stageRef.current.getPointerPosition();
+    const { width: viewportWidth, height: viewportHeight } = viewportSize;
 
-    let updatedX = x - diffX;
-    let updatedY = y - diffY;
+    const { scaleX, scaleY } = getReverseScale(stageSize, canvasSize);
 
-    setStageElements([
-      ...stageElements,
+    const updatedXPosition = (stageXPosition - diffX) * scaleX;
+    const updatedYPosition = (stageYPosition - diffY) * scaleY;
+
+    setElements([
+      ...elements,
       {
-        x: getBoundPerCoord(updatedX, stageWidth, width),
-        y: getBoundPerCoord(updatedY, stageHeight, height),
+        x: getBoundPerCoord(updatedXPosition, viewportWidth, width),
+        y: getBoundPerCoord(updatedYPosition, viewportHeight, height),
         type,
         id,
         width,
@@ -124,6 +304,7 @@ function App() {
         ...rest,
       },
     ]);
+
     setTables(
       tables.map((table) => {
         const { id: tableId } = table;
@@ -133,76 +314,121 @@ function App() {
         return table;
       })
     );
-    setSelectedElement(id);
+    setSelected(id);
     setDraggable(null);
   }
 
-  function handleOnDragEnd(e, { id }) {
-    const updatedX = e.target.x();
-    const updatedY = e.target.y();
+  function getDragBounds(coordinates, dimensions) {
+    const { width: viewportWidth, height: viewportHeight } = viewportSize;
+    const { width: itemWidth, height: itemHeight } = dimensions;
+    const { x, y } = coordinates;
 
-    const index = stageElements.findIndex(({ id: foundId }) => foundId === id);
+    const { scaleX, scaleY } = getScale(stageSize, canvasSize);
+
+    const viewportWidthRelativeToStage = viewportWidth * scaleX;
+    const viewportHeightRelativeToStage = viewportHeight * scaleY;
+    const itemWidthRelativeToStage = itemWidth * scaleX;
+    const itemHeightRelativeToStage = itemHeight * scaleY;
+
+    return {
+      x: getBoundPerCoord(
+        x,
+        viewportWidthRelativeToStage,
+        itemWidthRelativeToStage
+      ),
+      y: getBoundPerCoord(
+        y,
+        viewportHeightRelativeToStage,
+        itemHeightRelativeToStage
+      ),
+    };
+  }
+
+  function handleOnDragEnd(e, { id }) {
+    const x = e.target.x();
+    const y = e.target.y();
+
+    const index = elements.findIndex(({ id: foundId }) => foundId === id);
 
     if (index === -1) {
       return;
     }
 
-    let arr = [...stageElements];
+    let arr = [...elements];
 
-    const { width: stageWidth, height: stageHeight } = stageDimensions;
     const { width, height, ...rest } = arr[index];
 
     arr[index] = {
       ...rest,
       width,
       height,
-      x: getBoundPerCoord(updatedX, stageWidth, width),
-      y: getBoundPerCoord(updatedY, stageHeight, height),
+      x,
+      y,
     };
-    setStageElements(arr);
+    setElements(arr);
   }
 
-  function getDragBounds(coordinates, dimensions) {
-    const { width: stageWidth, height: stageHeight } = stageDimensions;
-    const { width: itemWidth, height: itemHeight } = dimensions;
-    const { x, y } = coordinates;
-
-    return {
-      x: getBoundPerCoord(x, stageWidth, itemWidth),
-      y: getBoundPerCoord(y, stageHeight, itemHeight),
-    };
+  function handleOnSelect(id) {
+    setSelected(id);
   }
 
   function handleOnTransformEnd(transformation, { id }) {
-    const foundIndex = stageElements.findIndex(
-      ({ id: foundId }) => foundId === id
-    );
+    const foundIndex = elements.findIndex(({ id: foundId }) => foundId === id);
 
     if (foundIndex === -1) {
       return;
     }
 
-    let arr = [...stageElements];
+    let arr = [...elements];
 
     arr[foundIndex] = {
       ...arr[foundIndex],
       ...transformation,
     };
 
-    setStageElements(arr);
-  }
-
-  function handleOnSelect(id) {
-    setSelectedElement(id);
+    setElements(arr);
   }
 
   function handleOnRotationChange(shape, id) {
-    const transformation = shape.getClientRect({
+    const { width, height } = shape.getClientRect({
       relativeTo: stageRef.current,
     });
-    // setBoundDimensions(transformation);
-    handleOnTransformEnd(transformation, { id });
+
+    const index = elements.findIndex(({ id: foundId }) => foundId === id);
+
+    if (index === -1) {
+      return;
+    }
+
+    const { x, y } = elements[index];
+    const { width: viewportWidth, height: viewportHeight } = viewportSize;
+
+    handleOnTransformEnd(
+      {
+        width,
+        height,
+        x: getBoundPerCoord(x, viewportWidth, width),
+        y: getBoundPerCoord(y, viewportHeight, height),
+      },
+      { id }
+    );
   }
+
+  useEffect(() => {
+    recalculateOutOfBoundsArea();
+    //  eslint-disable-next-line
+  }, [canvasSize]);
+
+  useLayoutEffect(() => {
+    recalculateParentDimensions();
+    //  eslint-disable-next-line;
+  }, [windowWidth]);
+
+  useEffect(() => {
+    redrawGridlines();
+    recalculateCanvasDimensions();
+    //  eslint-disable-next-line
+  }, [viewportSize]);
 
   return (
     <div className="App">
@@ -212,71 +438,71 @@ function App() {
             {tables
               .filter(({ assigned }) => !assigned)
               .map((table) => (
-                <UnassignedTable
+                <DraggableTable
+                  dpRatio={dpRatio}
                   key={table.id}
                   table={table}
                   onDragStart={handleOnDragStart}
                 />
               ))}
           </TopPane>
-          <MiddlePane>
-            <LeftPane></LeftPane>
+          <MiddlePane ref={middleRef}>
+            <LeftPane ref={leftPaneRef}></LeftPane>
+            <PaneSeparator />
             <RightPane
               ref={rightPaneRef}
               onDragOver={handleOnDragOver}
               onDrop={handleOnDrop}
-              id="container"
             >
               <Stage
-                ref={stage}
-                width={100}
-                height={100}
-                style={{
-                  backgroundColor: "red",
-                }}
+                ref={stageRef}
+                {...stageSize}
+                {...getScale(stageSize, canvasSize)}
               >
-                {/* <Layer>
-                  <Rect
-                    x={0}
-                    y={0}
-                    width={stagePixelDimensions.width}
-                    height={stagePixelDimensions.height}
-                    stroke="red"
-                  />
-                </Layer> */}
+                <Layer>
+                  {gridLines}
+                  {elements.map((element) => {
+                    const { id } = element;
+                    return (
+                      <StageTable
+                        key={id}
+                        data={element}
+                        getDragBounds={getDragBounds}
+                        onDragEnd={handleOnDragEnd}
+                        onTransformEnd={handleOnTransformEnd}
+                        onRotationChange={handleOnRotationChange}
+                        onSelect={handleOnSelect}
+                        selected={selected === id}
+                      />
+                    );
+                  })}
+                  <Rect {...outOfBoundsArea} fill="#ccc" />
+                </Layer>
               </Stage>
-              {/* {stageDimensions && (
-                <Stage ref={stageRef} {...stageDimensions} id="container">
-                  <Layer>
-                    {stageElements.map((stageElement) => {
-                      const { id, type } = stageElement;
-                      if (type === DRAGGABLE_TYPES.UNASSIGNED) {
-                        return (
-                          <UnassignedStageTable
-                            key={id}
-                            data={{ ...stageElement, src: UnassignedSVG }}
-                            getDragBounds={getDragBounds}
-                            onDragEnd={handleOnDragEnd}
-                            onTransformEnd={handleOnTransformEnd}
-                            onRotationChange={handleOnRotationChange}
-                            setSelected={handleOnSelect}
-                            selected={selectedElement === id}
-                          />
-                        );
-                      }
-                      return null;
-                    })}
-                  </Layer>
-                </Stage>
-              )} */}
             </RightPane>
           </MiddlePane>
         </ParentPane>
         <BottomPane>
-          {/* <Button onClick={handleScaleUp}>Scale up</Button>
-          <Button onClick={handleScaleDown}>Scale down</Button> */}
-          <pre>{selectedElement}</pre>
-          <pre>{JSON.stringify(stageElements, null, 2)}</pre>
+          <Button onClick={scaleUp}>Scale Up</Button>
+          <Button onClick={scaleDown}>Scale Down</Button>
+          <Button onClick={scaleXUp}>Scale X Up</Button>
+          <Button onClick={scaleXDown}>Scale X Down</Button>
+          <Button onClick={scaleYUp}>Scale Y Up</Button>
+          <Button onClick={scaleYDown}>Scale Y Down</Button>
+          <pre>
+            {JSON.stringify(
+              {
+                stage: stageSize,
+                canvas: canvasSize,
+                viewport: viewportSize,
+                draggable,
+                elements,
+              },
+              null,
+              2
+            )}
+          </pre>
+          <pre>{JSON.stringify([], null, 2)}</pre>
         </BottomPane>
       </Container>
     </div>

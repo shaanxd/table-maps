@@ -9,7 +9,6 @@ export const Container = styled.div`
 
 export const MiddlePane = styled.div`
   display: flex;
-  border: 1px solid #d2d2d2;
 `;
 
 export const LeftPane = styled.div`
@@ -19,6 +18,7 @@ export const LeftPane = styled.div`
   max-width: 200px;
   padding: 0.5rem;
   background-color: #ededed;
+  border: 1px solid #d2d2d2;
 `;
 
 export const RightPane = styled.div`
@@ -26,6 +26,7 @@ export const RightPane = styled.div`
   flex: 1;
   box-sizing: border-box;
   margin-bottom: auto;
+  border: 1px solid #d2d2d2;
 `;
 
 export const DraggableCanvas = styled.div`
@@ -69,12 +70,16 @@ export const TopPane = styled.div`
   flex-wrap: wrap;
   padding: 1rem;
   border: 1px solid #d2d2d2;
-  border-bottom: none;
+  margin-bottom: 10px;
 `;
 
 export const ParentPane = styled.div`
   display: flex;
   flex-direction: column;
-  padding: 2rem;
+  padding: 20px;
   border: 1px solid #d2d2d2;
+`;
+
+export const PaneSeparator = styled.div`
+  width: 10px;
 `;
