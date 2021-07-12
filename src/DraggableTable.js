@@ -1,10 +1,10 @@
 import React, { useMemo } from "react";
 import styled, { css } from "styled-components";
+import { v4 } from "uuid";
 import {
   DRAGGABLE_TYPES,
   FONT_SIZE_IN_DEVICE_PIXELS,
   TABLE_DATA,
-  TABLE_TYPES,
 } from "./constants";
 
 const Container = styled.div`
@@ -22,6 +22,7 @@ const Image = styled.img`
       height: ${height}px;
     `;
   }}
+  border: 1px solid red;
 `;
 
 const Text = styled.div`
@@ -34,23 +35,31 @@ const Text = styled.div`
   font-size: ${({ size }) => `${size}px`};
 `;
 
-const {
-  dimensions: { width, height },
-  src,
-} = TABLE_DATA[TABLE_TYPES.TABLE_R1];
+function DraggableTable({
+  table: { name, id },
+  onDragStart,
+  dpRatio,
+  type,
+  onClick,
+}) {
+  const {
+    dimensions: { width, height },
+    src,
+  } = TABLE_DATA[type];
 
-function DraggableTable({ table: { name, id }, onDragStart, dpRatio }) {
   function handleOnDragStart(e) {
     onDragStart(e, {
-      id,
-      imageWidth: width,
-      imageHeight: height,
+      id: id || v4(),
       width,
       height,
-      name,
-      tableType: TABLE_TYPES.TABLE_R1,
+      name: name || "23",
+      tableType: type,
       draggableType: DRAGGABLE_TYPES.TABLE,
     });
+  }
+
+  function handleOnClick() {
+    onClick(type);
   }
 
   const { dimensions, size } = useMemo(
@@ -61,15 +70,28 @@ function DraggableTable({ table: { name, id }, onDragStart, dpRatio }) {
       },
       size: FONT_SIZE_IN_DEVICE_PIXELS * dpRatio,
     }),
+    //  eslint-disable-next-line
     [dpRatio]
   );
 
   return (
-    <Container draggable="true" onDragStart={handleOnDragStart}>
+    <Container
+      draggable="true"
+      onDragStart={handleOnDragStart}
+      onClick={handleOnClick}
+    >
       <Image dimensions={dimensions} draggable="false" src={src}></Image>
       <Text size={size}>{name}</Text>
     </Container>
   );
 }
+
+DraggableTable.defaultProps = {
+  table: {
+    id: null,
+    name: null,
+  },
+  onClick: () => {},
+};
 
 export default DraggableTable;

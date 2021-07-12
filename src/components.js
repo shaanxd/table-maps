@@ -1,10 +1,10 @@
+import { Col, Row } from "react-bootstrap";
 import styled from "styled-components";
 
 export const Container = styled.div`
   display: flex;
   max-height: 100%;
   flex-direction: column;
-  max-width: 1200px;
 `;
 
 export const MiddlePane = styled.div`
@@ -14,11 +14,9 @@ export const MiddlePane = styled.div`
 export const LeftPane = styled.div`
   display: flex;
   flex-direction: column;
-  min-width: 200px;
-  max-width: 200px;
-  padding: 0.5rem;
   background-color: #ededed;
   border: 1px solid #d2d2d2;
+  overflow-y: auto;
 `;
 
 export const RightPane = styled.div`
@@ -82,4 +80,24 @@ export const ParentPane = styled.div`
 
 export const PaneSeparator = styled.div`
   width: 10px;
+`;
+
+export const AppRow = styled(Row)`
+  margin: 0;
+  padding: 0;
+  margin: 10px 0px;
+`;
+
+export const AppColumn = styled(Col)`
+  margin: 0;
+  padding: 0;
+  display: flex;
+`;
+
+export const DraggableContainer = styled.div`
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
 `;

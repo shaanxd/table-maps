@@ -36,20 +36,12 @@ function StageTable({
     textHeight: 0,
   });
 
-  const {
-    x,
-    y,
-    id,
-    name,
-    width,
-    height,
-    rotation,
-    imageWidth,
-    imageHeight,
-    tableType,
-  } = data;
+  const { x, y, id, name, width, height, rotation, tableType } = data;
 
-  const { src } = TABLE_DATA[tableType];
+  const {
+    src,
+    dimensions: { width: imageWidth, height: imageHeight },
+  } = TABLE_DATA[tableType];
 
   useLayoutEffect(() => {
     const { textWidth, textHeight } = textRef.current;
@@ -60,7 +52,7 @@ function StageTable({
   useEffect(() => {
     onRotationChange(shapeRef.current, id);
     //  eslint-disable-next-line
-  }, [rotation]);
+  }, [rotation, tableType]);
 
   useEffect(() => {
     if (selected) {

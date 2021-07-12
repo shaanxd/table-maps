@@ -12,12 +12,18 @@ import {
   TopPane,
   Button,
   PaneSeparator,
+  AppColumn,
+  AppRow,
+  DraggableContainer,
 } from "./components";
 import {
   ASPECT_RATIO,
   INITIAL_STAGE_DIMENSIONS,
   GRID_SIZE,
   TABLES,
+  CONTAINER_SEPARATOR_WIDTH,
+  CONTAINER_RATIO,
+  TABLE_TYPES,
 } from "./constants";
 import StageTable from "./StageTable";
 import DraggableTable from "./DraggableTable.js";
@@ -147,19 +153,25 @@ function App() {
   }
 
   function recalculateParentDimensions() {
-    const { offsetWidth: leftPaneOffsetWidth } = leftPaneRef.current;
     const { offsetWidth: middlePaneOffsetWidth } = middleRef.current;
 
-    const canvasParentWidth = middlePaneOffsetWidth - leftPaneOffsetWidth - 10;
+    const actualMiddlePaneWidth =
+      middlePaneOffsetWidth - CONTAINER_SEPARATOR_WIDTH;
 
-    const scaledHeight =
-      (canvasParentWidth / ASPECT_RATIO.WIDTH) * ASPECT_RATIO.HEIGHT;
+    const devicePixelPerRatio =
+      actualMiddlePaneWidth / (CONTAINER_RATIO.LEFT + CONTAINER_RATIO.RIGHT);
+    const leftPaneWidth = devicePixelPerRatio * CONTAINER_RATIO.LEFT;
+    const rightPaneWidth = devicePixelPerRatio * CONTAINER_RATIO.RIGHT;
+    const rightPaneHeight =
+      (rightPaneWidth / ASPECT_RATIO.WIDTH) * ASPECT_RATIO.HEIGHT;
 
-    rightPaneRef.current.style.height = `${scaledHeight}px`;
-    rightPaneRef.current.style.width = `${canvasParentWidth}px`;
+    rightPaneRef.current.style.height = `${rightPaneHeight}px`;
+    rightPaneRef.current.style.width = `${rightPaneWidth}px`;
+    leftPaneRef.current.style.width = `${leftPaneWidth}px`;
+    leftPaneRef.current.style["max-height"] = `${rightPaneHeight}px`;
 
-    setStageSize({ width: canvasParentWidth, height: scaledHeight });
-    setDpRatio(canvasParentWidth / INITIAL_STAGE_DIMENSIONS.width);
+    setStageSize({ width: rightPaneWidth, height: rightPaneHeight });
+    setDpRatio(rightPaneWidth / INITIAL_STAGE_DIMENSIONS.width);
   }
 
   function recalculateOutOfBoundsArea() {
@@ -258,8 +270,8 @@ function App() {
         height,
         type,
       },
-      diffX: e.pageX - left - width / 2,
-      diffY: e.pageY - top - height / 2,
+      diffX: e.pageX - left - (width * devicePixelRatio) / 2,
+      diffY: e.pageY - top - (height * devicePixelRatio) / 2,
     });
   }
 
@@ -414,6 +426,23 @@ function App() {
     );
   }
 
+  function handleOnChangeTableType(tableType) {
+    if (!selected) {
+      return;
+    }
+    const index = elements.findIndex((element) => element.id === selected);
+
+    if (index === -1) {
+      return;
+    }
+    elements[index] = {
+      ...elements[index],
+      tableType,
+    };
+
+    setElements([...elements]);
+  }
+
   useEffect(() => {
     recalculateOutOfBoundsArea();
     //  eslint-disable-next-line
@@ -443,11 +472,157 @@ function App() {
                   key={table.id}
                   table={table}
                   onDragStart={handleOnDragStart}
+                  type={TABLE_TYPES.TABLE_R1}
                 />
               ))}
           </TopPane>
           <MiddlePane ref={middleRef}>
-            <LeftPane ref={leftPaneRef}></LeftPane>
+            <LeftPane ref={leftPaneRef}>
+              <AppRow>
+                <AppColumn>
+                  <DraggableContainer>
+                    <DraggableTable
+                      type={TABLE_TYPES.TABLE_C1}
+                      onDragStart={handleOnDragStart}
+                      dpRatio={dpRatio}
+                      onClick={handleOnChangeTableType}
+                    />
+                  </DraggableContainer>
+                </AppColumn>
+                <AppColumn>
+                  <DraggableContainer>
+                    <DraggableTable
+                      type={TABLE_TYPES.TABLE_R1}
+                      onDragStart={handleOnDragStart}
+                      dpRatio={dpRatio}
+                      onClick={handleOnChangeTableType}
+                    />
+                  </DraggableContainer>
+                </AppColumn>
+                <AppColumn>
+                  <DraggableContainer>
+                    <DraggableTable
+                      type={TABLE_TYPES.TABLE_C2}
+                      onDragStart={handleOnDragStart}
+                      dpRatio={dpRatio}
+                      onClick={handleOnChangeTableType}
+                    />
+                  </DraggableContainer>
+                </AppColumn>
+                <AppColumn>
+                  <DraggableContainer>
+                    <DraggableTable
+                      type={TABLE_TYPES.TABLE_R2}
+                      onDragStart={handleOnDragStart}
+                      dpRatio={dpRatio}
+                      onClick={handleOnChangeTableType}
+                    />
+                  </DraggableContainer>
+                </AppColumn>
+              </AppRow>
+              <AppRow>
+                <AppColumn>
+                  <DraggableContainer>
+                    <DraggableTable
+                      type={TABLE_TYPES.TABLE_C3}
+                      onDragStart={handleOnDragStart}
+                      dpRatio={dpRatio}
+                      onClick={handleOnChangeTableType}
+                    />
+                  </DraggableContainer>
+                </AppColumn>
+                <AppColumn>
+                  <DraggableContainer>
+                    <DraggableTable
+                      type={TABLE_TYPES.TABLE_R4A}
+                      onDragStart={handleOnDragStart}
+                      dpRatio={dpRatio}
+                      onClick={handleOnChangeTableType}
+                    />
+                  </DraggableContainer>
+                </AppColumn>
+              </AppRow>
+              <AppRow>
+                <AppColumn>
+                  <DraggableContainer>
+                    <DraggableTable
+                      type={TABLE_TYPES.TABLE_C4}
+                      onDragStart={handleOnDragStart}
+                      dpRatio={dpRatio}
+                      onClick={handleOnChangeTableType}
+                    />
+                  </DraggableContainer>
+                </AppColumn>
+                <AppColumn>
+                  <DraggableContainer>
+                    <DraggableTable
+                      type={TABLE_TYPES.TABLE_R4B}
+                      onDragStart={handleOnDragStart}
+                      dpRatio={dpRatio}
+                      onClick={handleOnChangeTableType}
+                    />
+                  </DraggableContainer>
+                </AppColumn>
+              </AppRow>
+              <AppRow>
+                <AppColumn>
+                  <DraggableContainer>
+                    <DraggableTable
+                      type={TABLE_TYPES.TABLE_C6}
+                      onDragStart={handleOnDragStart}
+                      dpRatio={dpRatio}
+                      onClick={handleOnChangeTableType}
+                    />
+                  </DraggableContainer>
+                </AppColumn>
+                <AppColumn>
+                  <DraggableContainer>
+                    <DraggableTable
+                      type={TABLE_TYPES.TABLE_R6}
+                      onDragStart={handleOnDragStart}
+                      dpRatio={dpRatio}
+                      onClick={handleOnChangeTableType}
+                    />
+                  </DraggableContainer>
+                </AppColumn>
+              </AppRow>
+              <AppRow>
+                <AppColumn>
+                  <DraggableContainer>
+                    <DraggableTable
+                      type={TABLE_TYPES.TABLE_R8}
+                      onDragStart={handleOnDragStart}
+                      dpRatio={dpRatio}
+                      onClick={handleOnChangeTableType}
+                    />
+                  </DraggableContainer>
+                </AppColumn>
+              </AppRow>
+              <AppRow>
+                <AppColumn>
+                  <DraggableContainer>
+                    <DraggableTable
+                      type={TABLE_TYPES.TABLE_C8}
+                      onDragStart={handleOnDragStart}
+                      dpRatio={dpRatio}
+                      onClick={handleOnChangeTableType}
+                    />
+                  </DraggableContainer>
+                </AppColumn>
+              </AppRow>
+              <AppRow>
+                <AppColumn>
+                  <DraggableContainer>
+                    <DraggableTable
+                      type={TABLE_TYPES.TABLE_R10}
+                      onDragStart={handleOnDragStart}
+                      dpRatio={dpRatio}
+                      onClick={handleOnChangeTableType}
+                    />
+                  </DraggableContainer>
+                </AppColumn>
+              </AppRow>
+            </LeftPane>
             <PaneSeparator />
             <RightPane
               ref={rightPaneRef}
