@@ -270,8 +270,8 @@ function App() {
         height,
         type,
       },
-      diffX: e.pageX - left - (width * devicePixelRatio) / 2,
-      diffY: e.pageY - top - (height * devicePixelRatio) / 2,
+      diffX: e.pageX - left - (width * dpRatio) / 2,
+      diffY: e.pageY - top - (height * dpRatio) / 2,
     });
   }
 
