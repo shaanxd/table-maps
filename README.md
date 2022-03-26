@@ -6,6 +6,10 @@
 
 This is project used to experiment on developing a restaurant layout design system.
 
+## Live Demo
+
+You can find a live demo at [https://table-maps-9f262.web.app/](https://table-maps-9f262.web.app/)
+
 ![Alt Text](https://github.com/shaanxd/react-draw-io/blob/master/src/static/sample.gif)
 
 ## Features
