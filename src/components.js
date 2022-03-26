@@ -3,8 +3,9 @@ import styled from "styled-components";
 
 export const Container = styled.div`
   display: flex;
-  max-height: 100%;
   flex-direction: column;
+  max-width: 800px;
+  overflow: auto;
 `;
 
 export const MiddlePane = styled.div`
@@ -27,29 +28,12 @@ export const RightPane = styled.div`
   border: 1px solid #d2d2d2;
 `;
 
-export const DraggableCanvas = styled.div`
-  flex: 1;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-`;
-
-export const DroppableCanvas = styled.canvas``;
-
-export const Separator = styled.div`
-  height: 20px;
-`;
-
 export const BottomPane = styled.div`
   width: 100%;
   padding: 1rem;
-  flex: 1;
   overflow: auto;
   box-sizing: border-box;
   border: 1px solid #d2d2d2;
-  overflow: auto;
   max-height: 100%;
 `;
 

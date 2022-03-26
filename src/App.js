@@ -24,9 +24,14 @@ import {
   CONTAINER_SEPARATOR_WIDTH,
   CONTAINER_RATIO,
   TABLE_TYPES,
+  GUIDELINE_OFFSET,
+  INTERSECTION_OFFSET,
+  GUIDELINE_COORDINATES,
+  GUIDELINE_COLOR,
 } from "./constants";
 import StageTable from "./StageTable";
 import DraggableTable from "./DraggableTable.js";
+import Konva from "konva";
 
 function getScale(scene, viewport) {
   const { width: sceneWidth, height: sceneHeight } = scene;
@@ -83,6 +88,7 @@ function App() {
   const middleRef = useRef();
   const leftPaneRef = useRef();
   const stageRef = useRef();
+  const layerRef = useRef();
 
   const { width: windowWidth } = useWindowSize();
 
@@ -91,6 +97,7 @@ function App() {
   const [canvasSize, setCanvasSize] = useState(INITIAL_STAGE_DIMENSIONS);
   const [gridLines, setGridLines] = useState([]);
   const [viewportSize, setViewPortSize] = useState(INITIAL_STAGE_DIMENSIONS);
+  const [guidelines, setGuidelines] = useState([]);
   const [outOfBoundsArea, setOutOfBoundsArea] = useState({
     width: 0,
     height: 0,
@@ -378,10 +385,264 @@ function App() {
       y,
     };
     setElements(arr);
+    setGuidelines([]);
   }
 
   function handleOnSelect(id) {
     setSelected(id);
+  }
+
+  function drawGuides(guides) {
+    const updatedGuideline = [];
+
+    if (guides.length === 0) {
+      if (guidelines.length !== 0) {
+        setGuidelines(updatedGuideline);
+      }
+      return;
+    }
+
+    guides.forEach(({ orientation, guideline }) => {
+      updatedGuideline.push(
+        orientation === "H"
+          ? {
+              x: 0,
+              y: guideline,
+              points: GUIDELINE_COORDINATES.HORIZONTAL,
+            }
+          : {
+              x: guideline,
+              y: 0,
+              points: GUIDELINE_COORDINATES.VERTICAL,
+            }
+      );
+    });
+
+    setGuidelines(updatedGuideline);
+  }
+
+  function getGuidelineStops() {
+    const vertical = [];
+    const horizontal = [];
+
+    layerRef.current
+      .find(".group")
+      .filter((node) => selected !== node.id())
+      .map((node) => node.find(".image")[0])
+      .forEach((item) => {
+        const { x, y, width, height } = item.getClientRect({
+          relativeTo: stageRef.current,
+        });
+        vertical.push([x, x + width]);
+        horizontal.push([y, y + height]);
+      });
+
+    return {
+      vertical: vertical.flat(),
+      horizontal: horizontal.flat(),
+    };
+  }
+
+  function getObjectSnapEdges(node) {
+    const boundingBox = node
+      .find(".image")[0]
+      .getClientRect({ relativeTo: stageRef.current });
+
+    const position = node.position();
+
+    return {
+      vertical: [
+        {
+          guide: Math.round(boundingBox.x),
+          offset: Math.round(position.x - boundingBox.x),
+          snap: "start",
+        },
+        {
+          guide: Math.round(boundingBox.x + boundingBox.width),
+          offset: Math.round(position.x - boundingBox.x - boundingBox.width),
+          snap: "end",
+        },
+      ],
+      horizontal: [
+        {
+          guide: Math.round(boundingBox.y),
+          offset: Math.round(position.y - boundingBox.y),
+          snap: "start",
+        },
+        {
+          guide: Math.round(boundingBox.y + boundingBox.height),
+          offset: Math.round(position.y - boundingBox.y - boundingBox.height),
+          snap: "end",
+        },
+      ],
+    };
+  }
+
+  function snapToGuideline(group) {
+    const guidelineStops = getGuidelineStops();
+
+    const objectSnapEdges = getObjectSnapEdges(group);
+
+    const guides = getGuides(guidelineStops, objectSnapEdges);
+
+    drawGuides(guides);
+
+    if (guides.length === 0) {
+      return;
+    }
+
+    let posX = null;
+    let posY = null;
+
+    const { height, width } = group
+      .find(".image")[0]
+      .getClientRect({ relativeTo: stageRef.current });
+
+    guides.forEach(({ orientation, snap, guideline }) => {
+      if (orientation === "H") {
+        if (snap === "start") {
+          posY = guideline + height / 2;
+        } else {
+          posY = guideline - height / 2;
+        }
+      } else if (snap === "start") {
+        posX = guideline + width / 2;
+      } else {
+        posX = guideline - width / 2;
+      }
+    });
+    const { width: viewportWidth, height: viewportHeight } = viewportSize;
+
+    if (posX !== null) {
+      group.x(getBoundPerCoord(posX, viewportWidth, width));
+    } else {
+      group.x(getBoundPerCoord(group.x(), viewportWidth, width));
+    }
+    if (posY !== null) {
+      group.y(getBoundPerCoord(posY, viewportHeight, height));
+    } else {
+      group.y(getBoundPerCoord(group.y(), viewportHeight, height));
+    }
+  }
+
+  function getOffsettedClientRect(node) {
+    const { x, y, width, height } = node.getClientRect();
+
+    return {
+      x: x + INTERSECTION_OFFSET,
+      y: y + INTERSECTION_OFFSET,
+      width: width - INTERSECTION_OFFSET * 2,
+      height: height - INTERSECTION_OFFSET * 2,
+    };
+  }
+
+  function objectOverlapDetection(e) {
+    const layer = layerRef.current;
+    const { target } = e;
+
+    const targetRect = getOffsettedClientRect(target.find(".image")[0]);
+
+    let isIntersected = false;
+
+    layer.find(".group").forEach((child) => {
+      // do not check intersection with itself
+      if (child === target) {
+        return;
+      }
+
+      if (child.getId() !== selected) {
+        child.to({ opacity: 1 });
+      }
+
+      if (
+        Konva.Util.haveIntersection(
+          child.find(".image")[0].getClientRect(),
+          targetRect
+        )
+      ) {
+        target.to({ opacity: 0.5 });
+        target.moveToTop();
+        isIntersected = true;
+      }
+    });
+
+    if (!isIntersected) {
+      target.to({ opacity: 1 });
+    }
+  }
+
+  function handleCheckOverlapForTransformation(id) {
+    if (!layerRef.current) {
+      return;
+    }
+
+    const [target] = layerRef.current
+      .find(".group")
+      .filter((node) => node.id() === id);
+
+    if (!target) {
+      return;
+    }
+
+    objectOverlapDetection({ target });
+  }
+
+  function getGuides(guidelineStops, objectSnapEdges) {
+    const verticalGuidelines = [];
+    const horizontalGuidelines = [];
+
+    guidelineStops.vertical.forEach((guideline) => {
+      objectSnapEdges.vertical.forEach(({ guide, snap, offset }) => {
+        const diff = Math.abs(guideline - guide);
+
+        if (diff < GUIDELINE_OFFSET) {
+          verticalGuidelines.push({
+            guideline,
+            diff,
+            snap,
+            offset,
+          });
+        }
+      });
+    });
+
+    guidelineStops.horizontal.forEach((guideline) => {
+      objectSnapEdges.horizontal.forEach(({ guide, snap, offset }) => {
+        const diff = Math.abs(guideline - guide);
+
+        if (diff < GUIDELINE_OFFSET) {
+          horizontalGuidelines.push({
+            guideline,
+            diff,
+            snap,
+            offset,
+          });
+        }
+      });
+    });
+
+    const guides = [];
+
+    const minVerticalSnap = verticalGuidelines.sort(
+      (a, b) => a.diff - b.diff
+    )[0];
+    const minHorizontalSnap = horizontalGuidelines.sort(
+      (a, b) => a.diff - b.diff
+    )[0];
+
+    if (minVerticalSnap) {
+      guides.push({
+        orientation: "V",
+        ...minVerticalSnap,
+      });
+    }
+    if (minHorizontalSnap) {
+      guides.push({
+        orientation: "H",
+        ...minHorizontalSnap,
+      });
+    }
+    return guides;
   }
 
   function handleOnTransformEnd(transformation, { id }) {
@@ -399,6 +660,7 @@ function App() {
     };
 
     setElements(arr);
+    handleCheckOverlapForTransformation(id);
   }
 
   function handleOnRotationChange(shape, id) {
@@ -634,8 +896,22 @@ function App() {
                 {...stageSize}
                 {...getScale(stageSize, canvasSize)}
               >
-                <Layer>
+                <Layer ref={layerRef}>
                   {gridLines}
+                  {guidelines.map((item, i) => {
+                    return (
+                      <Line
+                        // eslint-disable-next-line react/no-array-index-key
+                        key={i}
+                        // eslint-disable-next-line react/jsx-props-no-spreading
+                        {...item}
+                        stroke={GUIDELINE_COLOR}
+                        strokeWidth={1}
+                        name="guid-line"
+                        dash={[4, 6]}
+                      />
+                    );
+                  })}
                   {elements.map((element) => {
                     const { id } = element;
                     return (
@@ -648,6 +924,8 @@ function App() {
                         onRotationChange={handleOnRotationChange}
                         onSelect={handleOnSelect}
                         selected={selected === id}
+                        snapToLocation={snapToGuideline}
+                        overlapDetection={objectOverlapDetection}
                       />
                     );
                   })}

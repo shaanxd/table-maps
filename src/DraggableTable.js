@@ -22,7 +22,6 @@ const Image = styled.img`
       height: ${height}px;
     `;
   }}
-  border: 1px solid red;
 `;
 
 const Text = styled.div`

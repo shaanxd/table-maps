@@ -16,16 +16,6 @@ import TableR10 from "./static/table-r10.svg";
 
 export const COLORS = ["#FF5605", "#88C147", "#0099F3", "#F0255D"];
 
-export const GRID_LINE_OPTIONS = {
-  stroke: "#A9A9A9",
-  selectable: false,
-};
-
-export const ACTUAL_GRID_LINE_OPTIONS = {
-  stroke: "#d2d2d2",
-  selectable: false,
-};
-
 export const TABLES = [];
 
 for (let i = 1; i <= 20; i++) {
@@ -42,7 +32,15 @@ export const ASPECT_RATIO = {
   HEIGHT: 1,
 };
 
-export const GRID_SIZE = 100;
+export const GRID_SIZE = 50;
+export const GUIDELINE_OFFSET = 2.5;
+export const INTERSECTION_OFFSET = 5;
+export const GUIDELINE_COLOR = "#f95919";
+
+export const GUIDELINE_COORDINATES = {
+  HORIZONTAL: [-6000, 0, 6000, 0],
+  VERTICAL: [0, -6000, 0, 6000],
+};
 
 export const FONT_SIZE_IN_DEVICE_PIXELS = 18;
 

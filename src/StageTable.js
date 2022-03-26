@@ -25,6 +25,8 @@ function StageTable({
   onDragEnd,
   onTransformEnd,
   onRotationChange,
+  snapToLocation,
+  overlapDetection,
 }) {
   const textRef = useRef();
   const trRef = useRef();
@@ -80,6 +82,11 @@ function StageTable({
     onDragEnd(e, { id });
   }
 
+  function handleDragMove(e) {
+    overlapDetection(e);
+    snapToLocation(groupRef.current);
+  }
+
   function handleOnTransformEnd(e) {
     shapeRef.current.x(width / 2);
     shapeRef.current.y(height / 2);
@@ -92,12 +99,15 @@ function StageTable({
 
   return (
     <Group
+      id={id}
       x={x}
       y={y}
       draggable
       dragBoundFunc={handleGetDragBounds}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      onDragMove={handleDragMove}
+      name="group"
       offsetX={width / 2}
       offsetY={height / 2}
       ref={groupRef}
@@ -118,6 +128,7 @@ function StageTable({
         image={img}
         width={imageWidth}
         height={imageHeight}
+        name="image"
         ref={shapeRef}
         rotation={rotation}
         onClick={handleOnSelect}
